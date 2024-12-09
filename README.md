@@ -91,7 +91,7 @@ The model processes two images: a front view and a side view. Predictions are ba
 
    ```
    Predicted BMI: 23.45
-   Predicted Gender: Female
+   Predicted Gender: Male
    BMI Category: Over Weight
    ```
 
