@@ -12,7 +12,6 @@ This project uses a deep learning model to predict a person's BMI (Body Mass Ind
 - [Model Details](#model-details)
 - [Limitations](#limitations)
 - [Contributing](#contributing)
-- [License](#license)
 
 ---
 
