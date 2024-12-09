@@ -105,6 +105,9 @@ After running the script, the output is displayed in the terminal. Here’s a br
      - `Underweight`: BMI < 18.5
      - `Normal`: 18.5 ≤ BMI < 25
      - `Overweight`: BMI ≥ 25
+    
+    ![image](https://github.com/user-attachments/assets/966670a4-d156-4a69-b9c9-d7253a1c4c6e)
+
 
 ## Model Details
 
