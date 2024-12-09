@@ -1,82 +1,141 @@
+
 import os
+import pandas as pd
 import numpy as np
-from tensorflow.keras.models import load_model
 from tensorflow.keras.preprocessing.image import load_img, img_to_array
-from tensorflow.keras.applications.vgg16 import preprocess_input
-from tkinter import Tk, filedialog
+from tensorflow.keras.applications.vgg16 import preprocess_input, VGG16
+from tensorflow.keras.models import Model
+from tensorflow.keras.layers import Dense, Flatten, Input, Concatenate
+from tensorflow.keras.optimizers import Adam
+from sklearn.model_selection import train_test_split
+from tensorflow.keras.utils import Sequence
+from tensorflow.keras.callbacks import ModelCheckpoint
 
-# Load the trained model
-model_path = r'C:\Users\azadk\OneDrive\Desktop\projects\bmi_detection\log\model_epoch_07_val_loss_29.54.keras'
-model = load_model(model_path)
-print("Model loaded successfully.")
+# Load the BMI dataset
+dataset_path = r'C:\Users\azadk\OneDrive\Desktop\projects\bmi_detection\bmi.csv'
+df = pd.read_csv(dataset_path)
 
-# Function to preprocess a single image
-def preprocess_image(image_path):
-    try:
-        img = load_img(image_path, target_size=(224, 224))
-        img_array = img_to_array(img)
-        img_array = preprocess_input(np.expand_dims(img_array, axis=0))
-        return img_array[0]
-    except FileNotFoundError:
-        print(f"Image not found: {image_path}")
-        return None
+# Directories for images
+sides_folder = r'C:\Users\azadk\OneDrive\Desktop\projects\bmi_detection\illinois_doc_dataset\side\side'
+front_folder = r'C:\Users\azadk\OneDrive\Desktop\projects\bmi_detection\illinois_doc_dataset\front\front'
 
-# Function to categorize BMI
-def categorize_bmi(bmi):
-    if bmi < 18.5:
-        return "Underweight"
-    elif 18.5 <= bmi < 25:
-        return "Normal"
-    else:
-        return "Overweight"
+# Split the data into training and validation sets
+train_df, val_df = train_test_split(df, test_size=0.2, random_state=42)
 
-# Function to predict BMI and gender
-def predict_bmi_and_sex(front_image_path, side_image_path):
-    # Preprocess images
-    front_image = preprocess_image(front_image_path)
-    side_image = preprocess_image(side_image_path)
+# Data Generator
+class ImageDataGeneratorBMI(Sequence):
+    def __init__(self, dataframe, front_folder, side_folder, batch_size=32, shuffle=True):
+        self.dataframe = dataframe
+        self.front_folder = front_folder
+        self.side_folder = side_folder
+        self.batch_size = batch_size
+        self.shuffle = shuffle
+        self.on_epoch_end()
 
-    if front_image is None or side_image is None:
-        print("One or both images could not be processed.")
-        return None, None, None
+    def __len__(self):
+        return int(np.ceil(len(self.dataframe) / self.batch_size))
 
-    # Expand dimensions to match batch size
-    front_image = np.expand_dims(front_image, axis=0)
-    side_image = np.expand_dims(side_image, axis=0)
+    def __getitem__(self, index):
+        # Generate indices for the batch
+        batch_indices = self.indices[index * self.batch_size:(index + 1) * self.batch_size]
+        batch_df = self.dataframe.iloc[batch_indices]
 
-    # Predict
-    predictions = model.predict([front_image, side_image])
-    bmi_prediction = predictions[0][0][0]
-    sex_prediction = 1 if predictions[1][0][0] > 0.5 else 0
+        # Initialize arrays for images and labels
+        front_images = []
+        side_images = []
+        labels = []
 
-    # Decode gender
-    sex_decoded = 'Male' if sex_prediction == 1 else 'Female'
-    bmi_category = categorize_bmi(bmi_prediction)
+        for _, row in batch_df.iterrows():
+            id = row['id']
+            bmi = row['BMI']
 
-    return bmi_prediction, sex_decoded, bmi_category
+            # Load and preprocess images
+            front_path = os.path.join(self.front_folder, f'{id}.jpg')
+            side_path = os.path.join(self.side_folder, f'{id}.jpg')
 
-# Main function
-if __name__ == "__main__":
-    # Use tkinter file dialog to select images
-    Tk().withdraw()  # Hide the root window
-    print("Select the front view image.")
-    front_image_path = filedialog.askopenfilename(title="Select Front View Image", filetypes=[("Image Files", "*.jpg *.jpeg *.png")])
+            try:
+                front_img = load_img(front_path, target_size=(224, 224))
+                front_img = preprocess_input(np.expand_dims(img_to_array(front_img), axis=0))
 
-    print("Select the side view image.")
-    side_image_path = filedialog.askopenfilename(title="Select Side View Image", filetypes=[("Image Files", "*.jpg *.jpeg *.png")])
+                side_img = load_img(side_path, target_size=(224, 224))
+                side_img = preprocess_input(np.expand_dims(img_to_array(side_img), axis=0))
 
-    # Check if images were selected
-    if front_image_path and side_image_path:
-        print(f"Selected Front Image: {front_image_path}")
-        print(f"Selected Side Image: {side_image_path}")
+                front_images.append(front_img[0])
+                side_images.append(side_img[0])
+                labels.append(bmi)
+            except FileNotFoundError:
+                continue  # Skip missing images
 
-        # Predict
-        bmi_prediction, sex_decoded, bmi_category = predict_bmi_and_sex(front_image_path, side_image_path)
-        if bmi_prediction is not None and sex_decoded is not None and bmi_category is not None:
-            print(f"Predicted BMI: {bmi_prediction:.2f}")
-            print(f"Predicted Gender: {sex_decoded}")
-            print(f"BMI Category: {bmi_category}")
-        else:
-            print("Prediction could not be completed due to missing or invalid images.")
-    else:
-        print("Image selection cancelled.")
+        # Return as tuple of numpy arrays
+        return (np.array(front_images), np.array(side_images)), np.array(labels)
+
+    def on_epoch_end(self):
+        self.indices = np.arange(len(self.dataframe))
+        if self.shuffle:
+            np.random.shuffle(self.indices)
+
+# Create generators
+train_generator = ImageDataGeneratorBMI(train_df, front_folder, sides_folder, batch_size=32)
+val_generator = ImageDataGeneratorBMI(val_df, front_folder, sides_folder, batch_size=32, shuffle=False)
+
+# Load VGG16 model without the top layers
+base_model = VGG16(weights='imagenet', include_top=False, input_shape=(224, 224, 3))
+
+# Freeze the VGG16 layers
+for layer in base_model.layers:
+    layer.trainable = False
+
+# Define the input layers for the front and side images
+input_front = Input(shape=(224, 224, 3))
+input_side = Input(shape=(224, 224, 3))
+
+# Get VGG16 feature maps for front and side images
+vgg_front = base_model(input_front)
+vgg_side = base_model(input_side)
+
+# Flatten the outputs of VGG16
+vgg_front = Flatten()(vgg_front)
+vgg_side = Flatten()(vgg_side)
+
+# Concatenate both image features
+merged = Concatenate()([vgg_front, vgg_side])
+
+# Add custom fully connected layers
+fc1 = Dense(512, activation='relu')(merged)
+fc2 = Dense(256, activation='relu')(fc1)
+output = Dense(1, activation='linear')(fc2)
+
+# Create the model
+model = Model(inputs=[input_front, input_side], outputs=output)
+
+# Compile the model
+model.compile(optimizer=Adam(), loss='mean_squared_error', metrics=['mae'])
+
+# Create a directory for saving models if it doesn't exist
+log_dir = 'log1'
+os.makedirs(log_dir, exist_ok=True)
+
+# Correct filepath for ModelCheckpoint with `.keras` extension
+checkpoint_filepath = os.path.join(log_dir, 'model_epoch_{epoch:02d}_val_loss_{val_loss:.2f}.keras')
+
+# Updated ModelCheckpoint callback
+checkpoint_callback = ModelCheckpoint(
+    filepath=checkpoint_filepath,
+    monitor='val_loss',
+    save_best_only=False,  # Save every epoch
+    save_weights_only=False,  # Save the entire model
+    mode='auto',
+    verbose=1
+)
+
+# Train the model with the callback
+history = model.fit(
+    train_generator,
+    validation_data=val_generator,
+    epochs=10,
+    callbacks=[checkpoint_callback]  # Add the callback here
+)
+
+# Evaluate the model on the validation set
+loss, mae = model.evaluate(val_generator)
+print(f'Validation loss: {loss}, Validation MAE: {mae}')
