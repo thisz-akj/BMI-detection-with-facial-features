@@ -84,6 +84,11 @@ The model processes two images: a front view and a side view. Predictions are ba
    - Predicted Gender (Male or Female)
 
 4. Example Output:
+
+   ![A02244](https://github.com/user-attachments/assets/8f5c48cc-242c-4cfd-8709-8026cd8e863e)
+   ![A02244](https://github.com/user-attachments/assets/d497b7d7-dda4-42fd-8ba5-a54f4aab8349)
+
+
    ```
    Predicted BMI: 23.45
    Predicted Gender: Female
