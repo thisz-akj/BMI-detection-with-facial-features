@@ -6,6 +6,7 @@ from tensorflow.keras.models import load_model
 from tensorflow.keras.applications.vgg16 import preprocess_input
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from scipy.stats import pearsonr
+import matplotlib.pyplot as plt
 
 # Paths
 model_path = r'C:\Users\azadk\OneDrive\Desktop\projects\bmi_detection\log\model_epoch_07_val_loss_29.54.keras'
@@ -68,8 +69,37 @@ mse = mean_squared_error(bmi_true, bmi_pred)
 r2 = r2_score(bmi_true, bmi_pred)
 pearson_corr, _ = pearsonr(bmi_true, bmi_pred)
 
-
 print(f"MAE: {mae}")
 print(f"MSE: {mse}")
 print(f"R2 Score: {r2}")
 print(f"Pearson Coefficient: {pearson_corr}")
+
+# Create a DataFrame for actual and predicted BMI
+data = {
+    'Actual_BMI': bmi_true,
+    'Predicted_BMI': bmi_pred
+}
+bmi_comparison_df = pd.DataFrame(data)
+
+# Save to a CSV file
+output_csv_path = r'C:\Users\azadk\OneDrive\Desktop\projects\bmi_detection\bmi_comparison.csv'
+bmi_comparison_df.to_csv(output_csv_path, index=False)
+print(f"CSV file saved at: {output_csv_path}")
+
+# Plot the graph
+plt.figure(figsize=(10, 6))
+plt.scatter(bmi_pred, bmi_true, alpha=0.7, color='blue', label='Predicted vs Actual')
+plt.plot([min(bmi_true), max(bmi_true)], [min(bmi_true), max(bmi_true)], color='red', linestyle='--', label='Perfect Fit Line')
+plt.title('Predicted BMI vs Actual BMI')
+plt.xlabel('Predicted BMI')
+plt.ylabel('Actual BMI')
+plt.legend()
+plt.grid(True)
+
+# Save the graph as an image
+output_image_path = r'C:\Users\azadk\OneDrive\Desktop\projects\bmi_detection\bmi_comparison_plot.png'
+plt.savefig(output_image_path)
+print(f"Graph image saved at: {output_image_path}")
+
+# Display the plot
+plt.show()
