@@ -1,6 +1,3 @@
-Here's the updated README with the correct repository name:  
-
----
 
 # BMI-Detection-with-Facial-Features
 
