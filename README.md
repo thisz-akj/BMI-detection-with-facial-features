@@ -110,11 +110,16 @@ After running the script, the output is displayed in the terminal. Here’s a br
 
 ### Example Output:
 ```
+![A02244](https://github.com/user-attachments/assets/e8bf8803-4d0b-406c-bd4a-fdaf3dbadf3e)
+![A02244](https://github.com/user-attachments/assets/52b4c832-68f9-4933-977e-13783a5c5297)
+
+
+
 Selected Front Image: path/to/front_image.jpg
 Selected Side Image: path/to/side_image.jpg
 Predicted BMI: 22.75
 Predicted Gender: Male
-BMI Category: Normal
+BMI Category: Over Weight
 ```
 
 ---
